@@ -39,6 +39,7 @@ agents RTK, a CLI that cuts shell output down before the model reads it.
 
 ## Constraints and failure behavior
 
+- The built-in plugin's `InUse` count reads committed `library.json` metadata without taking the synchronization lock. The desktop's blocking bootstrap needs this count before its first paint; a startup sync must not leave the whole window blank. Atomic saves expose a complete previous or new version. Missing metadata counts as empty; unreadable or invalid metadata remains unknown and keeps the existing plugin guard conservative.
 - magpie takes away only what `Applied` or its mark says it wrote. A folder of the user's with a skill's name is never touched. The user's own fields in an MCP entry are kept.
 - An edit never silently loses. When an agent's copy of a skill and the library both changed, the newest edit wins, and the losing one is kept with the backups.
 - An update from GitHub never silently replaces a skill changed here. It is refused, or skipped in an update of several, until the user says to replace it, and the version replaced goes to the backups.

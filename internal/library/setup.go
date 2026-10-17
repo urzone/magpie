@@ -1,12 +1,15 @@
 package library
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
 	"sort"
 	"strings"
+
+	"github.com/yetone/magpie/internal/edit"
 )
 
 // Setup is which agents get what from the library, and the instructions,
@@ -254,11 +257,27 @@ func Restore(s *Setup) (*Result, error) {
 // gets them. The library built-in plugin stays on while it is
 // more than 0. A library.json that can't be read is an error, never 0.
 func InUse() (int, error) {
-	mu.Lock()
-	defer mu.Unlock()
-	l, err := load()
+	// The window needs only committed metadata, not a synchronized view
+	// of agents' files. Waiting for mu here makes boot.js wait for the
+	// startup sync and leaves both webviews blank. Atomic saves let this
+	// read see either complete version without holding the sync lock.
+	b, err := edit.Read(path())
 	if err != nil {
 		return 0, err
+	}
+	if len(b) == 0 {
+		if _, err := os.Stat(path()); os.IsNotExist(err) {
+			return 0, nil
+		} else if err != nil {
+			return 0, err
+		}
+		return 0, fmt.Errorf("%s: empty library metadata", path())
+	}
+	var l Library
+	if len(b) > 0 {
+		if err := json.Unmarshal(b, &l); err != nil {
+			return 0, fmt.Errorf("%s: %w", path(), err)
+		}
 	}
 	n := len(l.MCP) + len(l.Skills) + len(l.Hooks) + len(l.Projects)
 	if len(l.Instructions.Agents) > 0 {
