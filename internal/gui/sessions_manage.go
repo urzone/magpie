@@ -131,7 +131,12 @@ func sessionManageRoutes(mux *http.ServeMux, w Windows) {
 			Recorded: sessions.HasGatewayConversations()}
 		want := r.URL.Query().Get("agent")
 		counts := map[string]*manageAgentJSON{}
-		for _, a := range sessions.Agents() {
+		inventory, nativeCounts, err := sessions.InventoryChecked()
+		if err != nil {
+			fail(rw, err)
+			return
+		}
+		for _, a := range inventory {
 			j := manageAgentJSON{AgentCount: a, Name: a.Agent, Icon: "generic"}
 			if l := looks[a.Agent]; l != nil {
 				j.Name, j.Icon = l.SharedName(), l.Icon
@@ -139,13 +144,6 @@ func sessionManageRoutes(mux *http.ServeMux, w Windows) {
 			counts[a.Agent] = &j
 		}
 		gateway := listedGateway(usage.GatewaySessions(time.Time{}, nil))
-		nativeCounts := map[string]map[string]bool{}
-		for _, s := range sessions.List(sessions.All) {
-			if nativeCounts[s.Agent] == nil {
-				nativeCounts[s.Agent] = map[string]bool{}
-			}
-			nativeCounts[s.Agent][s.ID] = true
-		}
 		for _, s := range gateway {
 			if nativeCounts[s.Agent][s.ID] {
 				continue
@@ -178,7 +176,11 @@ func sessionManageRoutes(mux *http.ServeMux, w Windows) {
 			out.Agent = out.Agents[0].Agent
 		}
 		if out.Agent != "" {
-			list := sessions.ListAgent(out.Agent)
+			list, err := sessions.ListAgentView(out.Agent)
+			if err != nil {
+				fail(rw, err)
+				return
+			}
 			var modelEffort map[string][]sessions.ModelEffort
 			if out.Agent == "codex" {
 				modelEffort = usage.CodexModelEffort(usage.All)
@@ -243,12 +245,12 @@ func sessionManageRoutes(mux *http.ServeMux, w Windows) {
 			return
 		}
 		// the gateway sessions as listed: those with no native session
-		native := map[string]bool{}
-		for _, s := range sessions.List(sessions.All) {
-			if s.Agent == in.Agent {
-				native[s.ID] = true
-			}
+		_, nativeByAgent, err := sessions.InventoryChecked()
+		if err != nil {
+			fail(rw, err)
+			return
 		}
+		native := nativeByAgent[in.Agent]
 		listed := map[string]usage.GatewaySession{}
 		for _, g := range listedGateway(usage.GatewaySessions(time.Time{}, nil)) {
 			if g.Agent == in.Agent && !native[g.ID] {

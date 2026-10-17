@@ -470,10 +470,15 @@ func ccFiles(agent, dir string) []file {
 
 // allFiles are every agent's session files.
 func allFiles() []file {
+	return allFilesWithHermes(hermesFiles())
+}
+
+// Reuse checked Hermes discovery instead of reading the store a second time.
+func allFilesWithHermes(hermes []file) []file {
 	var out []file
 	for _, fs := range [][]file{callFiles(), openCodeFiles(), piFiles(),
 		wslFiles("pi", "omp", "kimi"), zcodeFiles(), dshFiles(), clineFiles(), ccFiles("qoder", QoderDir("qoder")), ccFiles("qoder-cn", QoderDir("qoder-cn")),
-		grokFiles(), workbuddyFiles(), codebuddyFiles(), droidFiles(), ompFiles(), cursorFiles(), hermesFiles(), almaFiles(), kimiFiles()} {
+		grokFiles(), workbuddyFiles(), codebuddyFiles(), droidFiles(), ompFiles(), cursorFiles(), hermes, almaFiles(), kimiFiles()} {
 		out = append(out, fs...)
 	}
 	return out
@@ -1042,6 +1047,10 @@ func List(limit int) []Session {
 
 // assemble puts a session together from its files' parses.
 func assemble(fs []file, price func(string) *catalog.Price) (Session, bool) {
+	return assembleStates(fs, price, cache)
+}
+
+func assembleStates(fs []file, price func(string) *catalog.Price, states map[string]*state) (Session, bool) {
 	// the session's own file first; for Codex the earliest segment
 	sort.SliceStable(fs, func(i, j int) bool {
 		if fs[i].main != fs[j].main {
@@ -1057,7 +1066,7 @@ func assemble(fs []file, price func(string) *catalog.Price) (Session, bool) {
 	var custom, named, first string
 	models := map[string]*Model{}
 	for _, f := range fs {
-		st := cache[f.path]
+		st := states[f.path]
 		if st == nil {
 			continue
 		}

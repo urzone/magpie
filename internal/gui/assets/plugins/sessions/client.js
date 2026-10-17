@@ -738,10 +738,10 @@ magpie.plugin("sessions", (ctx) => {
     }
     const who = el("div", "who");
     who.append(el("div", "name", s.title || t("(no prompt)")));
-    const sub = el("div", "sub", [ago(s.last), sessModelsText(s), s.messages ? t(s.messages === 1 ? "{n} message" : "{n} messages", { n: s.messages }) : "",
+    const sub = el("div", "sub", [ago(s.last), sessModelsText(s), s.details_pending ? t("Message details load when opened") : s.messages ? t(s.messages === 1 ? "{n} message" : "{n} messages", { n: s.messages }) : "",
       // a gateway session's size is the conversation magpie recorded of it,
       // and none is said when it recorded none; its title is its id already
-      s.gateway ? (s.size ? t("{size} recorded", { size: fmtBytes(s.size) }) : "") : fmtBytes(s.size),
+      s.gateway ? (s.size ? t("{size} recorded", { size: fmtBytes(s.size) }) : "") : s.details_pending ? "" : fmtBytes(s.size),
       s.title === s.id ? "" : s.id.slice(0, 8)].filter(Boolean).join(" · "));
     if (s.via?.length) sub.title = s.via.map(viaText).join("\n");
     if (s.wsl) sub.prepend(wslBadge(s), " ");

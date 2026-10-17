@@ -66,7 +66,9 @@ func gatewaySession(g usage.GatewaySession) sessions.Session {
 }
 
 func sessionRoutes(mux *http.ServeMux, w Windows) {
-	warmSessions()
+	// History is indexed when its page is requested. Eager all-history
+	// statistics held the shared session reader before a selected agent's
+	// list could load, and repeated scans of live databases at startup.
 	mux.HandleFunc("GET /api/sessions", func(rw http.ResponseWriter, r *http.Request) {
 		n, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 		// The page draws a session count taken from every session

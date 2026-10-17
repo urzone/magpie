@@ -2,6 +2,7 @@
 // kernel adds them to i18n.js's (magpie.strings).
 magpie.strings({
   zh: {
+    "Message details load when opened": "打开会话时读取消息详情",
     "{n} subagent": "{n} 个子代理",
     "{n} subagents": "{n} 个子代理",
     "Relocate project": "迁移项目会话",
@@ -71,6 +72,7 @@ magpie.strings({
     "Searched what was said in the latest {n} of {total} sessions.": "已搜索最近 {n} 个会话的对话内容（共 {total} 个）。",
   },
   "zh-TW": {
+    "Message details load when opened": "開啟會話時讀取訊息詳情",
     "{n} subagent": "{n} 個子代理",
     "{n} subagents": "{n} 個子代理",
     "Relocate project": "遷移專案會話",
@@ -140,6 +142,7 @@ magpie.strings({
     "Searched what was said in the latest {n} of {total} sessions.": "已搜尋最近 {n} 個會話的對話內容（共 {total} 個）。",
   },
   ja: {
+    "Message details load when opened": "会話を開くとメッセージの詳細を読み込みます",
     "{n} subagent": "{n} 個のサブエージェント",
     "{n} subagents": "{n} 個のサブエージェント",
     "Relocate project": "プロジェクトを移動",
@@ -209,6 +212,7 @@ magpie.strings({
     "Searched what was said in the latest {n} of {total} sessions.": "最新 {n} 件の会話の内容を検索しました（全 {total} 件）。",
   },
   de: {
+    "Message details load when opened": "Nachrichtendetails werden beim Öffnen geladen",
     "{n} subagent": "{n} Subagent",
     "{n} subagents": "{n} Subagenten",
     "Relocate project": "Projekt verschieben",

@@ -33,6 +33,10 @@ three.
 
 ## Constraints and failure behavior
 
+### Session management reads
+
+The management page discovers native identity/count inventory without parsing all transcripts for gateway deduplication, then reads the selected agent. Startup does not schedule an eager all-history statistics rebuild. Hermes management reads native session metadata and canonical model usage in read-only transactions; it leaves exact message count and file-size details marked `details_pending` rather than displaying unknown values as zero. Full statistics and transcript interfaces retain their original behavior. Named Hermes sessions need no message scan for their management rows; unnamed legacy sessions retain the existing fallback-title semantics. A failed metadata or usage read fails the view instead of publishing a partial list. Exact raw message duplicates are folded in SQLite before the existing Go display-identity reconciliation, preserving first position and active/newest representative selection.
+
 ### Allowance card refreshes
 
 A card refresh applies only the requested account from the API's full

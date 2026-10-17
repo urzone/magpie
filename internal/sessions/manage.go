@@ -37,10 +37,11 @@ import (
 // deleted.
 type Managed struct {
 	Session
-	Size      int64 `json:"size"`
-	Messages  int   `json:"messages"`
-	Files     int   `json:"files"`
-	Deletable bool  `json:"deletable"`
+	Size           int64 `json:"size"`
+	Messages       int   `json:"messages"`
+	Files          int   `json:"files"`
+	Deletable      bool  `json:"deletable"`
+	DetailsPending bool  `json:"details_pending,omitempty"`
 	// Codex: the provider the session was made with, and the one its Codex
 	// uses now, whose sessions alone its history lists (#887)
 	Provider     string `json:"provider,omitempty"`
@@ -73,17 +74,55 @@ var ErrActive = errors.New("the session was written to in the last minute; it ma
 
 // Agents are the agents with sessions on this computer, by how many.
 func Agents() []AgentCount {
+	counts, _ := Inventory()
+	return counts
+}
+
+// Inventory discovers final native identities and counts from session headers,
+// without parsing transcript statistics.
+func Inventory() ([]AgentCount, map[string]map[string]bool) {
+	counts, ids, _ := inventory(false)
+	return counts, ids
+}
+
+// InventoryChecked reports unknown discovery before management classifies
+// a session as native or gateway-only.
+func InventoryChecked() ([]AgentCount, map[string]map[string]bool, error) {
+	return inventory(true)
+}
+
+func inventory(checked bool) ([]AgentCount, map[string]map[string]bool, error) {
 	dbReadMu.Lock()
 	defer dbReadMu.Unlock()
 	mu.Lock()
 	defer mu.Unlock()
 	defer closeDBs()
-	n := map[string]map[string]bool{}
-	for _, f := range allFiles() {
-		if n[f.agent] == nil {
-			n[f.agent] = map[string]bool{}
+	loadCache()
+	var files []file
+	if checked {
+		hermes, err := hermesFilesChecked()
+		if err != nil {
+			return nil, nil, err
 		}
-		n[f.agent][f.key] = true
+		files = allFilesWithHermes(hermes)
+	} else {
+		files = allFiles()
+	}
+	groups := map[string][]file{}
+	for _, f := range files {
+		groups[f.key] = append(groups[f.key], f)
+	}
+	n := map[string]map[string]bool{}
+	for _, fs := range groups {
+		agent := fs[0].agent
+		if n[agent] == nil {
+			n[agent] = map[string]bool{}
+		}
+		id, err := inventoryIdentityChecked(fs)
+		if checked && err != nil {
+			return nil, nil, err
+		}
+		n[agent][id] = true
 	}
 	out := []AgentCount{}
 	for a, keys := range n {
@@ -95,18 +134,32 @@ func Agents() []AgentCount {
 		}
 		return out[i].Agent < out[j].Agent
 	})
-	return out
+	return out, n, nil
 }
 
 // ListAgent is every session of one agent, the most recently active first,
 // with no limit; one nothing was said in is listed too, to be cleared away.
 func ListAgent(agent string) []Managed {
+	out, _ := listAgent(agent, false)
+	return out
+}
+
+// ListAgentView uses native aggregates for Hermes's management list.
+// Full message activity statistics remain available through ListAgent/Stats.
+func ListAgentView(agent string) ([]Managed, error) {
+	return listAgent(agent, true)
+}
+
+func listAgent(agent string, summary bool) ([]Managed, error) {
 	dbReadMu.Lock()
 	defer dbReadMu.Unlock()
 	mu.Lock()
 	defer mu.Unlock()
 	loadCache()
 	defer closeDBs()
+	if summary && agent == "hermes" {
+		return hermesManagedChecked()
+	}
 	all := allFiles()
 	groups := map[string][]file{}
 	var mine []file
@@ -151,7 +204,7 @@ func ListAgent(agent string) []Managed {
 		}
 		return out[i].ID < out[j].ID
 	})
-	return out
+	return out, nil
 }
 
 // listed fills in what assemble leaves out of a session nothing was said
